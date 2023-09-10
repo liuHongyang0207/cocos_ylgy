@@ -31,8 +31,9 @@ export class game extends Component {
     numLevel: number;
 
     start() {
-
+        //关卡
         this.numLevel = 0
+        //关卡数据
         this.gameData = this.node.getComponent(gameData)
         //删除所有子节点
         this.parentBlocks.removeAllChildren()
