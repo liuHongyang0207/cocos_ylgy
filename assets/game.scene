@@ -2495,7 +2495,7 @@
   },
   {
     "__type__": "cc.Node",
-    "_name": "diBu",
+    "_name": "parentBlocksDB",
     "_objFlags": 0,
     "__editorExtras__": {},
     "_parent": {
@@ -2553,7 +2553,7 @@
     "__prefab": null,
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 654.72,
+      "width": 610,
       "height": 127.36
     },
     "_anchorPoint": {
@@ -11948,6 +11948,9 @@
     },
     "parentBlocks": {
       "__id__": 86
+    },
+    "parentBlocksDB": {
+      "__id__": 70
     },
     "_id": "961rm3lhBNd5WYcDhUsGT6"
   },

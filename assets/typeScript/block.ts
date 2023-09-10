@@ -18,6 +18,8 @@ export class block extends Component {
     blockType : any
     //是否可以点击
     canTouch : boolean
+    //临时定义底部元素的数字
+    numDB: number;
     start() {
     }
 
@@ -25,6 +27,15 @@ export class block extends Component {
         this.blockType =type //0-29
         this.canTouch = true
         this.spYuanSu.spriteFrame = this.spfYuanSu[this.blockType]
+    }
+
+    initDB(type){
+        this.numDB = -1
+        this.blockType =type //0-29
+        this.canTouch = false
+        this.nodeYinYing.active = false
+        this.spYuanSu.spriteFrame = this.spfYuanSu[type]
+
     }
 
     shuaXin(type){

@@ -14,12 +14,16 @@ const { ccclass, property } = _decorator;
 */
 @ccclass('game')
 export class game extends Component {
+    //预制体
     @property({type:Prefab})
     preBlock = null
 
-    //
+    //存放每一个block
     @property({type:Node})
     parentBlocks = null
+
+    @property({type:Node})
+    parentBlocksDB = null
 
     //开始碰触的元素数
     numTouchStart: number;
@@ -29,10 +33,16 @@ export class game extends Component {
     gameData: gameData;
     //关卡
     numLevel: number;
+    //元素的x起始位置
+    xStartDB: number;
+
 
     start() {
         //关卡
         this.numLevel = 0
+        //元素的x起始位置
+        this.xStartDB = 610 / 2 - 280 - 610 / 2 + 40
+        // this.xStartDB = -250
         //关卡数据
         this.gameData = this.node.getComponent(gameData)
         //删除所有子节点
@@ -74,6 +84,49 @@ export class game extends Component {
             }
             block_1.init(num_type_random)
         }
+    }
+
+    //在底部创建元素快
+    createBlockBottom(type){
+        //实例化出block
+        let node_block =  instantiate(this.preBlock)
+
+        let x = this.xStartDB+80 * this.parentBlocksDB.children.length
+        let y = 0
+        //设置block的位置
+        node_block.setPosition(x,y,0)
+        // this.node 就是拖拽进来的预制体
+        node_block.parent = this.parentBlocksDB
+
+        //设定元素的内容
+        let block_1 = node_block.getComponent(block)
+
+        block_1.initDB(type)
+        this.getBlockBottomPos()
+    }
+
+    //得到元素快在底部的位置
+    getBlockBottomPos(){
+
+        let children = this.parentBlocksDB.children
+        if (children.length>2) {
+
+        var lastElement = children[children.length - 1]; // 获取最后一个元素
+        // 循环遍历前面的元素
+        for (var k = 0; k <= children.length - 1; k++) {
+            let childrens = children[k].getComponent(block).blockType
+            if (childrens == lastElement.getComponent(block).blockType) {
+                // 如果前面有与最后一个元素相同的元素
+                for (let j = k; j <= children.length-2-k; j++) {
+                    let  kong = children[j+1].getComponent(block).blockType
+                    children[j+1].getComponent(block).blockType = children[j].getComponent(block).blockType
+                    children[j].getComponent(block).blockType = kong
+                }
+            }
+        }
+
+        }
+
     }
 
     //判断叠加
@@ -166,6 +219,7 @@ export class game extends Component {
                     // 判断是否是同一个 block，是的话就删除
                     if (this.numTouchStart === this.numTouchEnd) {
                         item.removeFromParent();
+                        this.createBlockBottom(ts_block.blockType)
                         this.pddj()
                         break
                     }
@@ -205,6 +259,24 @@ export class game extends Component {
 
         }
         this.pddj()
+    }
+
+    //刷新底部
+    btn4(children){
+        for (let i = 0; i < children.length; i++) {
+            let item = children[i];
+            // 判断 block 是否可以选中
+            let ts_block = item.getComponent(block);
+            let i_random = Math.floor(Math.random()*children.length)
+            let ts_block2 = children[i_random].getComponent(block);
+
+            let type1 = ts_block.blockType
+            let type2 = ts_block2.blockType
+
+            ts_block.shuaXin(type2)
+            ts_block2.shuaXin(type1)
+
+        }
     }
 
     //输出所有元素快的坐标
