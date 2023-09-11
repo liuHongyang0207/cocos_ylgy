@@ -87,7 +87,7 @@ export class game extends Component {
     }
 
     //在底部创建元素快
-    createBlockBottom(type){
+    createBlockBottom(type, startPosition){
         //实例化出block
         let node_block =  instantiate(this.preBlock)
 
@@ -95,8 +95,18 @@ export class game extends Component {
 
         let x = this.xStartDB+80 * blockBottomPos.num
         let y = 0
+
+        //将parentBlocks的坐标转为世界坐标
+        let v3_startPosition = this.parentBlocks.getComponent(UITransform).convertToWorldSpaceAR(startPosition)
+        //将世界坐标转为parentBlocksDB的坐标
+        let v3_startPositionDB = this.parentBlocksDB.getComponent(UITransform).convertToNodeSpaceAR(v3_startPosition)
+
         //设置block的位置
-        node_block.setPosition(x,y,0)
+        node_block.setPosition(v3_startPositionDB)
+
+        //添加动作
+        tween(node_block).to(0.2,{position:new Vec3(x,y,0)}).start()
+
         // this.node 就是拖拽进来的预制体
 
         if (blockBottomPos.is) {
@@ -229,8 +239,8 @@ export class game extends Component {
                     console.log("确认点中了" + i);
                     // 判断是否是同一个 block，是的话就删除
                     if (this.numTouchStart === this.numTouchEnd) {
+                        this.createBlockBottom(ts_block.blockType,item.getPosition())
                         item.removeFromParent();
-                        this.createBlockBottom(ts_block.blockType)
                         this.pddj()
                         break
                     }
