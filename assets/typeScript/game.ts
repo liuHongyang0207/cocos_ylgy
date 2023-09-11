@@ -91,8 +91,10 @@ export class game extends Component {
         //实例化出block
         let node_block =  instantiate(this.preBlock)
 
+        //得到重复元素在底部的位置
         var blockBottomPos = this.getBlockBottomPos(type);
 
+        //得到元素的坐标
         let x = this.xStartDB+80 * blockBottomPos.num
         let y = 0
 
@@ -107,16 +109,13 @@ export class game extends Component {
         //添加动作
         tween(node_block).to(0.2,{position:new Vec3(x,y,0)}).start()
 
-        // this.node 就是拖拽进来的预制体
-
         if (blockBottomPos.is) {
             //将预制体插入指定位置
             this.parentBlocksDB.insertChild(node_block,blockBottomPos.num)
         }else{
+            //将数据添加到预制体中
             node_block.parent = this.parentBlocksDB
         }
-
-
         //设定元素的内容
         let block_1 = node_block.getComponent(block)
 
@@ -124,15 +123,18 @@ export class game extends Component {
 
     }
 
-    //得到元素快在底部的位置
+    //得到重复元素在底部的位置
     getBlockBottomPos(type){
-        debugger
         let children = this.parentBlocksDB.children
         if (children.length>=2) {
         // 循环遍历前面的元素
         for (var k = 0; k < children.length-1; k++) {
             //判断是否相同的元素
             if (children[k].getComponent(block).blockType == type) {
+                //因为消除是3个开始，所以判断下一个是否也相同，从最后面追加
+                if (children[k+1].getComponent(block).blockType == type){
+                    k = k+1
+                }
                 // 如果前面有与最后一个元素相同的元素
                 for (let j = k+1; j <= children.length-1; j++) {
                     //将后面的元素x坐标加80
