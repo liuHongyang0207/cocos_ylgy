@@ -91,40 +91,51 @@ export class game extends Component {
         //实例化出block
         let node_block =  instantiate(this.preBlock)
 
-        let x = this.xStartDB+80 * this.parentBlocksDB.children.length
+        var blockBottomPos = this.getBlockBottomPos(type);
+
+        let x = this.xStartDB+80 * blockBottomPos.num
         let y = 0
         //设置block的位置
         node_block.setPosition(x,y,0)
         // this.node 就是拖拽进来的预制体
-        node_block.parent = this.parentBlocksDB
+
+        if (blockBottomPos.is) {
+            //将预制体插入指定位置
+            this.parentBlocksDB.insertChild(node_block,blockBottomPos.num)
+        }else{
+            node_block.parent = this.parentBlocksDB
+        }
+
 
         //设定元素的内容
         let block_1 = node_block.getComponent(block)
 
         block_1.initDB(type)
-        this.getBlockBottomPos()
+
     }
 
     //得到元素快在底部的位置
-    getBlockBottomPos(){
-
+    getBlockBottomPos(type){
+        debugger
         let children = this.parentBlocksDB.children
-        if (children.length>2) {
-
-        var lastElement = children[children.length - 1]; // 获取最后一个元素
+        if (children.length>=2) {
         // 循环遍历前面的元素
-        for (var k = 0; k <= children.length - 1; k++) {
-            let childrens = children[k].getComponent(block).blockType
-            if (childrens == lastElement.getComponent(block).blockType) {
+        for (var k = 0; k < children.length-1; k++) {
+            //判断是否相同的元素
+            if (children[k].getComponent(block).blockType == type) {
                 // 如果前面有与最后一个元素相同的元素
-                for (let j = k; j <= children.length-2-k; j++) {
-                    let  kong = children[j+1].getComponent(block).blockType
-                    children[j+1].getComponent(block).blockType = children[j].getComponent(block).blockType
-                    children[j].getComponent(block).blockType = kong
+                for (let j = k+1; j <= children.length-1; j++) {
+                    //将后面的元素x坐标加80
+                    children[j].setPosition(children[j].getPosition().x+80,0,0)
                 }
+                //改变元素在parentBlocksDB的位置
+                return {num:k+1,is:true}
             }
         }
-
+        return {num:children.length,is:false}
+        }
+        else {
+           return {num:children.length,is:false}
         }
 
     }
