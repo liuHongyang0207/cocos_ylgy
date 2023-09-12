@@ -35,6 +35,8 @@ export class game extends Component {
     numLevel: number;
     //元素的x起始位置
     xStartDB: number;
+    //是否消除
+    isXiaoChu: boolean;
 
 
     start() {
@@ -51,6 +53,9 @@ export class game extends Component {
         this.crateBlocks()
         // this.pddj()
         this.btn3()
+        //是否消除
+        this.isXiaoChu = false
+
 
 
 
@@ -90,9 +95,9 @@ export class game extends Component {
     createBlockBottom(type, startPosition){
         //实例化出block
         let node_block =  instantiate(this.preBlock)
-
-        //得到重复元素在底部的位置
         var blockBottomPos = this.getBlockBottomPos(type);
+
+
 
         //得到元素的坐标
         let x = this.xStartDB+80 * blockBottomPos.num
@@ -107,7 +112,17 @@ export class game extends Component {
         node_block.setPosition(v3_startPositionDB)
 
         //添加动作
-        tween(node_block).to(0.2,{position:new Vec3(x,y,0)}).start()
+        tween(node_block)
+            .to(0.12,{position:new Vec3(x,y,0)})
+            .call(()=>{
+                if (blockBottomPos.returnNum){
+                    this.pdxc(blockBottomPos.num)
+                }else {
+                    this.isXiaoChu = false
+                }
+            })
+            .start()
+
 
         if (blockBottomPos.is) {
             //将预制体插入指定位置
@@ -126,14 +141,20 @@ export class game extends Component {
     //得到重复元素在底部的位置
     getBlockBottomPos(type){
         let children = this.parentBlocksDB.children
+        //判断是否第三个相同元素
+        let returnNum = false
+
         if (children.length>=2) {
         // 循环遍历前面的元素
         for (var k = 0; k < children.length-1; k++) {
             //判断是否相同的元素
             if (children[k].getComponent(block).blockType == type) {
+
                 //因为消除是3个开始，所以判断下一个是否也相同，从最后面追加
                 if (children[k+1].getComponent(block).blockType == type){
+                    //即将要插入的位置 - 有3个相同了
                     k = k+1
+                    returnNum = true
                 }
                 // 如果前面有与最后一个元素相同的元素
                 for (let j = k+1; j <= children.length-1; j++) {
@@ -141,13 +162,52 @@ export class game extends Component {
                     children[j].setPosition(children[j].getPosition().x+80,0,0)
                 }
                 //改变元素在parentBlocksDB的位置
-                return {num:k+1,is:true}
+                return {num:k+1,is:true,returnNum:returnNum}
             }
         }
         return {num:children.length,is:false}
         }
         else {
            return {num:children.length,is:false}
+        }
+
+    }
+
+    //判断是否可以消除
+    //z
+    pdxc(number){
+        //获取所有的元素
+        let children = this.parentBlocksDB.children
+        //循环遍历所有元素，从number下角标向前删除3个block
+        for (let i = number; i >= number-2; i--) {
+
+            debugger
+
+
+            //删除元素
+            //创建一个删除的动作
+            tween(children[i])
+                // .delay(0.08)
+                .to(0.1,{scale:new Vec3(0,0,0)})
+                .removeSelf()
+                .call(()=>{
+                    //循环遍历所有元素，从number下角标向后每个block的x坐标减240
+                    for (let j = number-2; j < children.length; j++) {
+                        //做一个移动的动作
+                        //x坐标减240
+                        tween(children[j])
+                            // .delay(0.08)
+                            .to(0.1,{position:new Vec3(children[j].getPosition().x-240,0,0)})
+                            .call(()=>{
+                                this.isXiaoChu = false
+                            })
+                            .start()
+                        // children[j].setPosition(children[j].getPosition().x-240,0,0)
+
+                    }
+                })
+                .start()
+            // children[i].removeFromParent()
         }
 
     }
@@ -167,7 +227,6 @@ export class game extends Component {
                 //有相交，改变颜色
                 if(rect_1.intersects(rect_2)){
                     block_1.setTouch(false)
-                    console.log("相交了")
                     break
                 }
             }
@@ -175,9 +234,9 @@ export class game extends Component {
     }
 
     onTouchStart(event:EventTouch){
-
-
-        console.log("点击事件")
+        if (this.isXiaoChu) {
+            return
+        }
         //获取 UI 坐标系下的触点位置
         let v2_touchstart = event.getUILocation()
         //将 UI 坐标系下的触点位置转换到当前节点坐标系下的触点位置
@@ -200,7 +259,6 @@ export class game extends Component {
                 let node_UITransform = item.getComponent(UITransform);
                 if (node_UITransform.getBoundingBox().contains(new Vec2(v3_touchstart.x, v3_touchstart.y))) {
                     this.numTouchStart = i;
-                    console.log("点中了" + i);
                     //点中后加一个放大的效果
                     tween(item).to(0.1,{scale:new Vec3(1.2,1.2,1.2)}).start()
                     break
@@ -223,6 +281,9 @@ export class game extends Component {
     }
 
     onTouchEnd(event:EventTouch){
+        if (this.isXiaoChu) {
+            return
+        }
         let v2_touchstart = event.getUILocation()
         //将 UI 坐标系下的触点位置转换到当前节点坐标系下的触点位置
         let v3_touchstart = this.parentBlocks.getComponent(UITransform).convertToNodeSpaceAR(new Vec3(v2_touchstart.x,v2_touchstart.y,0))
@@ -238,26 +299,27 @@ export class game extends Component {
                 let node_UITransform = item.getComponent(UITransform);
                 if (node_UITransform.getBoundingBox().contains(new Vec2(v3_touchstart.x, v3_touchstart.y))) {
                     this.numTouchEnd = i;
-                    console.log("确认点中了" + i);
                     // 判断是否是同一个 block，是的话就删除
-                    if (this.numTouchStart === this.numTouchEnd) {
+
+                    if (this.numTouchStart === this.numTouchEnd && ts_block.isXiaoChu==false) {
+                        this.isXiaoChu = true
+                        ts_block.isXiaoChu = true
                         this.createBlockBottom(ts_block.blockType,item.getPosition())
-                        item.removeFromParent();
-                        this.pddj()
-                        break
+                            item.removeFromParent();
+                            this.pddj()
+                            break
                     }
                 }
             }
         }
-
         tween(children[this.numTouchStart]).to(0.1,{scale:new Vec3(1,1,1)}).start()
 
     }
 
     //按钮的回调
     callBackBtn(event:Event,str:string){
+        //洗牌按钮
         if (str === "btn_3") {
-            console.log("洗牌按钮")
             this.btn3()
             this.getBlockZuoBiao()
 
@@ -310,7 +372,6 @@ export class game extends Component {
             let item = children[i].getPosition();
             str = str+"{x:"+item.x+",y:"+item.y+"},\n"
         }
-        console.log(str)
     }
 
 

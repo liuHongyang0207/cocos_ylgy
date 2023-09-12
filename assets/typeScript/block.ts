@@ -20,6 +20,10 @@ export class block extends Component {
     canTouch : boolean
     //临时定义底部元素的数字
     numDB: number;
+    //是否消除
+    isXiaoChu: boolean;
+    //底部元素是否在移动
+    isMove: boolean;
     start() {
     }
 
@@ -27,6 +31,7 @@ export class block extends Component {
         this.blockType =type //0-29
         this.canTouch = true
         this.spYuanSu.spriteFrame = this.spfYuanSu[this.blockType]
+        this.isXiaoChu = false
     }
 
     initDB(type){
