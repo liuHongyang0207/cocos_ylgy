@@ -5,6 +5,7 @@ const { ccclass, property } = _decorator;
 export class gameData extends Component {
     arrPosLevel:any[];
     arrTypeLevel:any[];
+    arrPosRemove: any[];
 
 
     start() {
@@ -36,6 +37,13 @@ export class gameData extends Component {
                 {x:170,y:-142.488},
             ]
         ]
+
+        //移除的位置坐标数据
+        this.arrPosRemove = [
+            {x:-100,y:-305},
+            {x:0,y:-305},
+            {x:100,y:-305},
+            ]
     }
 
     update(deltaTime: number) {

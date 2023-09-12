@@ -37,6 +37,8 @@ export class game extends Component {
     xStartDB: number;
     //是否消除
     isXiaoChu: boolean;
+    //是否禁用btn_1
+    isBtn1: boolean;
 
 
     start() {
@@ -55,6 +57,8 @@ export class game extends Component {
         this.btn3()
         //是否消除
         this.isXiaoChu = false
+        //是否禁用btn_1
+        this.isBtn1 = false
 
 
 
@@ -159,7 +163,10 @@ export class game extends Component {
                 // 如果前面有与最后一个元素相同的元素
                 for (let j = k+1; j <= children.length-1; j++) {
                     //将后面的元素x坐标加80
-                    children[j].setPosition(children[j].getPosition().x+80,0,0)
+                    tween(children[j])
+                        .to(0.1,{position:new Vec3(children[j].getPosition().x+80,0,0)})
+                        .start()
+                    // children[j].setPosition(children[j].getPosition().x+80,0,0)
                 }
                 //改变元素在parentBlocksDB的位置
                 return {num:k+1,is:true,returnNum:returnNum}
@@ -180,14 +187,10 @@ export class game extends Component {
         let children = this.parentBlocksDB.children
         //循环遍历所有元素，从number下角标向前删除3个block
         for (let i = number; i >= number-2; i--) {
-
-            debugger
-
-
             //删除元素
             //创建一个删除的动作
             tween(children[i])
-                // .delay(0.08)
+                .delay(0.08)
                 .to(0.1,{scale:new Vec3(0,0,0)})
                 .removeSelf()
                 .call(()=>{
@@ -196,7 +199,7 @@ export class game extends Component {
                         //做一个移动的动作
                         //x坐标减240
                         tween(children[j])
-                            // .delay(0.08)
+                            .delay(0.08)
                             .to(0.1,{position:new Vec3(children[j].getPosition().x-240,0,0)})
                             .call(()=>{
                                 this.isXiaoChu = false
@@ -318,12 +321,91 @@ export class game extends Component {
 
     //按钮的回调
     callBackBtn(event:Event,str:string){
-        //洗牌按钮
-        if (str === "btn_3") {
-            this.btn3()
-            this.getBlockZuoBiao()
 
+        switch (str) {
+            //洗牌按钮
+            case "btn_3":
+                this.btn3()
+                break;
+
+            //出去3个按钮
+            case "btn_1":
+                this.btn1()
+                break;
         }
+
+
+    }
+
+    //出去3个按钮
+    btn1(){
+        if (this.isXiaoChu) {
+            return
+        }
+        this.isXiaoChu = true
+        //获取所有的元素
+        let children = this.parentBlocksDB.children
+
+        //判断长度是否大于3
+        let isThree = children.length > 3
+        //判断长度是否大于1
+        if (children.length>=1&&!this.isBtn1) {
+            this.isBtn1 = true
+            let length = children.length>=3?3:children.length
+            //循环遍历所有元素，
+            for (let i = 0; i < length; i++) {
+
+                //添加元素到底部
+                let preBlock = instantiate(this.preBlock)
+
+                preBlock.parent = this.parentBlocks
+                //初始化元素
+                switch (length) {
+                    case 1:
+                        preBlock.setPosition(this.gameData.arrPosRemove[1].x,this.gameData.arrPosRemove[1].y,0)
+                        break;
+                    case 2:
+                        let zuobiao = i==0?this.gameData.arrPosRemove[0]:this.gameData.arrPosRemove[2]
+                        preBlock.setPosition(zuobiao.x,zuobiao.y,0)
+                        break;
+                    case 3:
+                        preBlock.setPosition(this.gameData.arrPosRemove[i].x,this.gameData.arrPosRemove[i].y,0)
+
+                }
+                let block_1 = preBlock.getComponent(block)
+                block_1.init(children[i].getComponent(block).blockType)
+                block_1.setTouch(true)
+
+
+                tween(children[i])
+                    .delay(0.05)
+                    .to(0.05,{scale:new Vec3(0,0,0)})
+                    .removeSelf()
+                    .call(()=>{
+                        if (isThree){
+                        //循环遍历所有元素，从number下角标向后每个block的x坐标减240
+                            for (let j = 0; j < children.length; j++) {
+                            //做一个移动的动作
+                            //x坐标减240
+                            tween(children[j])
+                                .delay(0.05)
+                                .to(0.05,{position:new Vec3(children[j].getPosition().x-240,0,0)})
+                                .call(()=>{
+                                    this.isXiaoChu = false
+                                })
+                                .start()
+                            // children[j].setPosition(children[j].getPosition().x-240,0,0)
+
+                        }
+                        }else {
+                            this.isXiaoChu = false
+                        }
+                    })
+                    .start()
+            }
+        }
+
+
     }
 
     //洗牌功能
