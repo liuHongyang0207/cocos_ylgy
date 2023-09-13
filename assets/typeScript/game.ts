@@ -34,6 +34,10 @@ export class game extends Component {
     @property({type:Node})
     parentBlocksDB = null
 
+    //道具的数量
+    @property({type:[Label]})
+    arrLableDJ = []
+
     //开始碰触的元素数
     numTouchStart: number;
     //结束碰触的元素数
@@ -54,9 +58,16 @@ export class game extends Component {
     isBtn3: Boolean;
     //最新加入的元素
     newBlock: any;
+    //失败或者成功后禁止点击
+    isJinZhi: boolean;
+    //每增加一关增加的块数
+    numAdd: number;
+    //道具的数量
+    arrLableNumber: number[];
 
 
     start() {
+
         //关卡
         this.numLevel = 0
         //元素的x起始位置
@@ -64,9 +75,15 @@ export class game extends Component {
         // this.xStartDB = -250
         //关卡数据
         this.gameData = this.node.getComponent(gameData)
-
+        //每增加一关增加的块数
+        this.numAdd =33
+        //道具的数量
+        this.arrLableNumber= this.node.getComponent(gameData).arrLableNumber
 
         this.init()
+
+        //道具的数组
+
 
 
 
@@ -100,6 +117,18 @@ export class game extends Component {
         this.layerOver.active = false
         //更新关卡
         this.labelLevel.string = "第 "+(this.numLevel+1)+" 关"
+        //失败或者成功后禁止点击
+        this.isJinZhi = false
+        //刷新道具的数量
+        this.shuaXinDJ()
+    }
+
+    //刷新道具的数量
+    shuaXinDJ(){
+        debugger
+        for (let i = 0; i < this.arrLableDJ.length; i++) {
+            this.arrLableDJ[i].string = this.arrLableNumber[i]
+        }
     }
 
     //创建一个block
@@ -107,16 +136,33 @@ export class game extends Component {
         //随机一个元素类型
         let num_type_random = 0
         //关卡难度
-        let arrTypeLevel = this.gameData.arrTypeLevel[this.numLevel]
+        let arrTypeLevel = this.gameData.arrTypeLevel[this.numLevel>=3?3:this.numLevel]
         //循环创建十个block
-        let arrPos = this.gameData.arrPosLevel[this.numLevel]
-        for (let i = 0; i < arrPos.length; i++) {
+        let arrPos = 0
+        let arrPosArray = null
+        if (this.numLevel==0) {
+            arrPos = this.gameData.arrPosLevel[this.numLevel].length
+            arrPosArray = this.gameData.arrPosLevel[this.numLevel]
+        }else {
+            arrPos = this.numAdd*(this.numLevel+1)
+        }
+
+        for (let i = 0; i < arrPos; i++) {
             //实例化出block
             let node_block =  instantiate(this.preBlock)
-            let x = arrPos[i].x
-            let y = arrPos[i].y
-            //设置block的位置
-            node_block.setPosition(x,y,0)
+            if (arrPosArray!=null){
+                let x = arrPosArray[i].x
+                let y = arrPosArray[i].y
+                //设置block的位置
+                node_block.setPosition(x,y,0)
+            }else {
+                let x = -250 +Math.random() *500
+                let y = -210 +Math.random() *620
+                //设置block的位置
+                node_block.setPosition(x,y,0)
+            }
+
+
             // this.node 就是拖拽进来的预制体
             node_block.parent = this.parentBlocks
             //设定元素的内容
@@ -276,7 +322,7 @@ export class game extends Component {
     }
 
     onTouchStart(event:EventTouch){
-        if (this.isXiaoChu) {
+        if (this.isXiaoChu||this.isJinZhi) {
             return
         }
         //获取 UI 坐标系下的触点位置
@@ -364,29 +410,53 @@ export class game extends Component {
         switch (str) {
             //洗牌按钮
             case "btn_3":
+
+                if (this.isJinZhi||this.isBtn3){
+                    return
+                }
+                this.arrLableNumber[2]--
+                this.shuaXinDJ()
+                this.isBtn3 = true
                 this.btn3()
                 break;
 
             //出去3个按钮
             case "btn_1":
-                this.btn1()
+                if (this.isJinZhi||this.isBtn1){
+                    return
+                }
+
+                this.btn1("cq")
                 break;
 
             //撤回按钮
             case "btn_2":
+                if (this.isJinZhi||this.isBtn2){
+                    return
+                }
+
                 this.btn2()
                 break;
 
                 //复活按钮
             case "btn_fh":
+                if (this.arrLableNumber[3]==0){
+                    return;
+                }
                 this.layerOver.active = false
                 this.isBtn1 = false
-                this.btn1()
+                this.isJinZhi = false
+                //修改道具数量
+                this.arrLableNumber[3]--
+                this.shuaXinDJ()
+
+                this.btn1("fh")
                 break;
 
                 //重新开始
             case "btn_cw":
                 this.numLevel = 0
+                this.isJinZhi = false
                 this.init()
                 break;
 
@@ -398,17 +468,17 @@ export class game extends Component {
 
     //撤回的方法
     btn2(){
-        console.log("撤回"   )
-        if (this.isXiaoChu) {
-            return
-        }
-        this.isXiaoChu = true
         //获取所有的元素
         let children = this.parentBlocksDB.children
         //判断长度是否大于3
 
         //判断长度是否大于1
         if (children.length>=1&&!this.isBtn2&&this.newBlock!=null) {
+            this.isXiaoChu = true
+
+            //修改道具数量
+            this.arrLableNumber[1]--
+            this.shuaXinDJ()
             let isThree = children.length > this.newBlock.num+1
             this.isBtn2 = true
             //循环遍历所有元素，
@@ -468,19 +538,26 @@ export class game extends Component {
 
 
     //出去3个按钮
-    btn1(){
-        if (this.isXiaoChu) {
-            return
-        }
-        this.isXiaoChu = true
+    btn1(str:string){
         //获取所有的元素
         let children = this.parentBlocksDB.children
 
         //判断长度是否大于3
         let isThree = children.length > 3
         //判断长度是否大于1
-        if (children.length>=1&&!this.isBtn1) {
-            this.isBtn1 = true
+        if (children.length>=1&&(!this.isBtn1||str=="fh")) {
+            this.isXiaoChu = true
+
+
+            this.shuaXinDJ()
+            //判断是否是复活
+            if (str!="fh") {
+                this.isBtn1 = true
+                //修改道具数量
+                this.arrLableNumber[0]--
+                this.shuaXinDJ()
+            }
+
             let length = children.length>=3?3:children.length
             //循环遍历所有元素，
             for (let i = 0; i < length; i++) {
@@ -568,10 +645,7 @@ export class game extends Component {
 
     //洗牌功能
     btn3(){
-        if (this.isBtn3){
-            return
-        }
-        this.isBtn3 = true
+        //修改道具数量
         let children = this.parentBlocks.children
         for (let i = 0; i < children.length; i++) {
             let item = children[i];
@@ -622,13 +696,14 @@ export class game extends Component {
     pdGameTrue(){
         let parentBlocks = this.parentBlocks.children
         if (parentBlocks.length==0){
+            this.isJinZhi = true
 
             //延时一秒后执行
             this.scheduleOnce(()=>{
                 this.numLevel++
                 //延时一秒后执行
                 this.init()
-            },1)
+            },0.5)
             console.log("游戏成功")
         }
     }
@@ -637,12 +712,13 @@ export class game extends Component {
     pdGameFalse(){
         let parentBlocksDB = this.parentBlocksDB.children
         if (parentBlocksDB.length>=7){
+            this.isJinZhi = true
             //延时一秒后执行
             this.scheduleOnce(()=>{
                 console.log("游戏失败")
                 //将失败后的背景图变为false
                 this.layerOver.active = true
-            },1)
+            },0.5)
 
         }
     }
