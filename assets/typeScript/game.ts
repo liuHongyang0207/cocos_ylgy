@@ -77,6 +77,8 @@ export class game extends Component {
     newBlock: any;
     //失败或者成功后禁止点击
     isJinZhi: boolean;
+    //添加或者修改模式
+    isAddDelete: number;//{0:添加,1:删除}
     //每增加一关增加的块数
     numAdd: number;
     //道具的数量
@@ -85,6 +87,8 @@ export class game extends Component {
     audioSource: any;
     //是否是编辑模式
     isBianJi: boolean;
+    //防止拖动添加多个
+    editMove: number;
 
 
 
@@ -103,12 +107,15 @@ export class game extends Component {
         this.arrLableNumber= this.node.getComponent(gameData).arrLableNumber
 
         //是否是编辑模式
-        this.isBianJi = false
+        this.isBianJi = true
+
+        //默认添加模式
+        this.isAddDelete = 0
 
         //初始化音频
         this.audioSource = this.node.getComponent(AudioSource)
 
-        this.createBlockEdit()
+
         this.init()
 
         //道具的数组
@@ -126,7 +133,7 @@ export class game extends Component {
     //初始化
     init(){
         //删除所有子节点
-        this.parentBlocks.removeAllChildren()
+
         this.parentBlocksDB.removeAllChildren()
 
         this.isXiaoChu = false
@@ -138,14 +145,27 @@ export class game extends Component {
         this.isBtn3 = false
         //最新加入的元素
         this.newBlock = null
-        //创建block
-        this.crateBlocks()
-        // this.pddj()
+        //判断是否编辑模式
+        if (this.isBianJi) {
+            this.createBlockEdit()
+            let children = this.parentBlocks.children
+            for (let i = 0; i < children.length; i++) {
+                let block_1 = children[i].getComponent(block)
+                let type_random = Math.floor(Math.random()*30)
+                block_1.init(type_random)
+
+            }
+        }else {
+            this.parentBlocks.removeAllchildren()
+            //创建block
+            this.crateBlocks()
+        }
+
+
         this.btn3()
         //将失败后的背景图变为false
         this.layerOver.active = false
-        //更新关卡
-        this.labelLevel.string = "第 "+(this.numLevel+1)+" 关"
+        this.shuXinTitle()
         //失败或者成功后禁止点击
         this.isJinZhi = false
         //刷新道具的数量
@@ -156,11 +176,25 @@ export class game extends Component {
 
     //刷新道具的数量
     shuaXinDJ(){
-        debugger
         for (let i = 0; i < this.arrLableDJ.length; i++) {
             this.arrLableDJ[i].string = this.arrLableNumber[i]
         }
     }
+
+    //展示标题
+    shuXinTitle(){
+        //更新关卡
+        if (this.isBianJi){
+            if (this.isAddDelete==0){
+                this.labelLevel.string = "添加元素模式"
+            }else {
+                this.labelLevel.string = "删除元素模式"
+            }
+        }else {
+            this.labelLevel.string = "第 "+(this.numLevel+1)+" 关"
+        }
+    }
+
 
     //创建一个block
     crateBlocks(){
@@ -368,7 +402,7 @@ export class game extends Component {
 
         //如果是编辑模式
         if (this.isBianJi) {
-            this.bianJi(rect_parentEdit)
+            this.bianJi(rect_parentEdit,"start")
             return;
         }
         //实例化出block
@@ -399,51 +433,81 @@ export class game extends Component {
     }
 
 
-    bianJi(rect_parentEdit: any){
+    bianJi(rect_parentEdit: any, start1: string){
         let children = this.parentEdit.children
-        for (let i = children.length-1; i >= 0; i--) {
-            let item = children[i];
-            // 判断 block 是否可以选中
+        if (this.isAddDelete==0){
+            for (let i = children.length-1; i >= 0; i--) {
+                let item = children[i];
+                // 判断 block 是否可以选中
 
-            let node_UITransform = item.getComponent(UITransform);
-            if (node_UITransform.getBoundingBox().contains(new Vec2(rect_parentEdit.x, rect_parentEdit.y))) {
-                //播放音效
-                this.audioSource.playOneShot(this.arrAudio[0],1)
-
-                //创建
-                let node_block =  instantiate(this.preBlock)
-                node_block.parent = this.parentBlocks
-                node_block.setPosition(children[i].getPosition())
-
-                let block_1 = node_block.getComponent(block)
-                let type_random = Math.floor(Math.random()*30)
-                block_1.init(type_random)
-                this.pddj()
-                break;
+                let node_UITransform = item.getComponent(UITransform);
+                if (node_UITransform.getBoundingBox().contains(new Vec2(rect_parentEdit.x, rect_parentEdit.y))) {
 
 
+                    if (this.editMove==i&&start1=="move"){
+                        return;
+                    }
+                    //播放音效
+                    this.audioSource.playOneShot(this.arrAudio[0],1)
+                    this.editMove = i
+                    //创建
+                    let node_block =  instantiate(this.preBlock)
+                    node_block.parent = this.parentBlocks
+                    node_block.setPosition(children[i].getPosition())
+
+                    let block_1 = node_block.getComponent(block)
+                    let type_random = Math.floor(Math.random()*30)
+                    block_1.init(type_random)
+                    this.pddj()
+                    return
+                }
 
             }
+        }else {
+            let children2 = this.parentBlocks.children
 
+            for (let i = children2.length-1; i >= 0; i--) {
+                let item = children2[i];
+                // 判断 block 是否可以选中
+
+                let node_UITransform = item.getComponent(UITransform);
+                if (node_UITransform.getBoundingBox().contains(new Vec2(rect_parentEdit.x, rect_parentEdit.y))) {
+                    //播放音效
+                    this.audioSource.playOneShot(this.arrAudio[0],1)
+
+                    //创建
+                    item.removeFromParent();
+                    this.pddj()
+                    return
+                }
+
+            }
         }
 
     }
 
     onTouchMove(event:EventTouch){
-        // let children = this.parentBlocks.children
-        // let v2_touchstart = event.getUILocation()
-        // //将 UI 坐标系下的触点位置转换到当前节点坐标系下的触点位置
-        // let v3_touchstart = this.parentBlocks.getComponent(UITransform).convertToNodeSpaceAR(new Vec3(v2_touchstart.x,v2_touchstart.y,0))
-        //
-        // //将最后一个block的位置设置为触摸点的位置
-        // children[children.length-1].setPosition(v3_touchstart)
-        // this.pddj()
+        if (this.isXiaoChu||this.isJinZhi) {
+            return
+        }
+        //获取 UI 坐标系下的触点位置
+        let v2_touchstart = event.getUILocation()
+        //将 UI 坐标系下的触点位置转换到当前节点坐标系下的触点位置
+        let v3_touchstart = this.parentBlocks.getComponent(UITransform).convertToNodeSpaceAR(new Vec3(v2_touchstart.x,v2_touchstart.y,0))
 
+        //创建一个parentEdit的位置
+        let rect_parentEdit = this.parentEdit.getComponent(UITransform).convertToNodeSpaceAR(new Vec3(v2_touchstart.x,v2_touchstart.y,0))
+
+        //如果是编辑模式
+        if (this.isBianJi) {
+            this.bianJi(rect_parentEdit, "move")
+            return;
+        }
 
     }
 
     onTouchEnd(event:EventTouch){
-        if (this.isXiaoChu) {
+        if (this.isXiaoChu||this.isBianJi) {
             return
         }
         let v2_touchstart = event.getUILocation()
@@ -558,7 +622,23 @@ export class game extends Component {
                         children[i].active = !children[i].active
                     }
                 }
+                break;
+            //清空
+            case "btn_clear":
+                this.parentBlocks.removeAllChildren()
+                break;
 
+            //添加
+            case "btn_add":
+                this.isAddDelete = 0
+                this.shuXinTitle()
+                break;
+
+            //删除
+            case "btn_delete":
+                this.isAddDelete = 1
+                this.shuXinTitle()
+                break;
 
 
         }
@@ -797,6 +877,7 @@ export class game extends Component {
         for (let i = 0; i < children.length; i++) {
             let item = children[i].getPosition();
             str = str+"{x:"+item.x+",y:"+item.y+"},\n"
+            console.log(str)
         }
     }
 
@@ -866,7 +947,7 @@ export class game extends Component {
                 // this.node 就是拖拽进来的预制体
                 node_block.parent = this.parentEdit
                 //默认隐藏
-                node_block.active = false
+                node_block.active = this.isBianJi
             }
         }
 
