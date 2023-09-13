@@ -1,4 +1,4 @@
-import { _decorator,Component, Node ,Label,Prefab,instantiate,tween,Input,Sprite,Vec3,Color,Vec2,input,EventTouch,UITransform} from 'cc';
+import { _decorator,Component, Node ,Label,Prefab,AudioClip,instantiate,tween,Input,AudioSource,Sprite,Vec3,Color,Vec2,input,EventTouch,UITransform} from 'cc';
 import {block} from "db://assets/typeScript/block";
 import {gameData} from "db://assets/typeScript/gameData";
 
@@ -14,9 +14,13 @@ const { ccclass, property } = _decorator;
 */
 @ccclass('game')
 export class game extends Component {
-    //预制体
+    //元素预制体
     @property({type:Prefab})
     preBlock = null
+
+    //编辑器预制体
+    @property({type:Prefab})
+    preBlockEdit = null
 
     //上部block
     @property({type:Node})
@@ -30,13 +34,26 @@ export class game extends Component {
     @property({type:Node})
     layerOver = null
 
+    //提示信息
+    @property({type:Node})
+    nodeTap = null
+
     //底部block
     @property({type:Node})
     parentBlocksDB = null
 
+    //编辑器节点
+    @property({type:Node})
+    parentEdit = null
+
+
     //道具的数量
     @property({type:[Label]})
     arrLableDJ = []
+
+    //音频文件列表
+    @property({type:[AudioClip]})
+    arrAudio = []
 
     //开始碰触的元素数
     numTouchStart: number;
@@ -64,6 +81,11 @@ export class game extends Component {
     numAdd: number;
     //道具的数量
     arrLableNumber: number[];
+    //音乐
+    audioSource: any;
+    //是否是编辑模式
+    isBianJi: boolean;
+
 
 
     start() {
@@ -80,6 +102,13 @@ export class game extends Component {
         //道具的数量
         this.arrLableNumber= this.node.getComponent(gameData).arrLableNumber
 
+        //是否是编辑模式
+        this.isBianJi = false
+
+        //初始化音频
+        this.audioSource = this.node.getComponent(AudioSource)
+
+        this.createBlockEdit()
         this.init()
 
         //道具的数组
@@ -121,6 +150,8 @@ export class game extends Component {
         this.isJinZhi = false
         //刷新道具的数量
         this.shuaXinDJ()
+        //提示信息大小
+        this.nodeTap.scale = new Vec3(0,0,0)
     }
 
     //刷新道具的数量
@@ -269,6 +300,8 @@ export class game extends Component {
     pdxc(number){
         //获取所有的元素
         let children = this.parentBlocksDB.children
+        //播放消除音效
+        this.audioSource.playOneShot(this.arrAudio[1],1)
         //循环遍历所有元素，从number下角标向前删除3个block
         for (let i = number; i >= number-2; i--) {
             //删除元素
@@ -330,6 +363,14 @@ export class game extends Component {
         //将 UI 坐标系下的触点位置转换到当前节点坐标系下的触点位置
         let v3_touchstart = this.parentBlocks.getComponent(UITransform).convertToNodeSpaceAR(new Vec3(v2_touchstart.x,v2_touchstart.y,0))
 
+        //创建一个parentEdit的位置
+        let rect_parentEdit = this.parentEdit.getComponent(UITransform).convertToNodeSpaceAR(new Vec3(v2_touchstart.x,v2_touchstart.y,0))
+
+        //如果是编辑模式
+        if (this.isBianJi) {
+            this.bianJi(rect_parentEdit)
+            return;
+        }
         //实例化出block
         /*let node_block =  instantiate(this.preBlock)
         node_block.setPosition(v3_touchstart)
@@ -346,6 +387,8 @@ export class game extends Component {
             if (ts_block.canTouch !== false) {
                 let node_UITransform = item.getComponent(UITransform);
                 if (node_UITransform.getBoundingBox().contains(new Vec2(v3_touchstart.x, v3_touchstart.y))) {
+                    //播放音效
+                    this.audioSource.playOneShot(this.arrAudio[0],1)
                     this.numTouchStart = i;
                     //点中后加一个放大的效果
                     tween(item).to(0.1,{scale:new Vec3(1.2,1.2,1.2)}).start()
@@ -353,6 +396,37 @@ export class game extends Component {
                 }
             }
         }
+    }
+
+
+    bianJi(rect_parentEdit: any){
+        let children = this.parentEdit.children
+        for (let i = children.length-1; i >= 0; i--) {
+            let item = children[i];
+            // 判断 block 是否可以选中
+
+            let node_UITransform = item.getComponent(UITransform);
+            if (node_UITransform.getBoundingBox().contains(new Vec2(rect_parentEdit.x, rect_parentEdit.y))) {
+                //播放音效
+                this.audioSource.playOneShot(this.arrAudio[0],1)
+
+                //创建
+                let node_block =  instantiate(this.preBlock)
+                node_block.parent = this.parentBlocks
+                node_block.setPosition(children[i].getPosition())
+
+                let block_1 = node_block.getComponent(block)
+                let type_random = Math.floor(Math.random()*30)
+                block_1.init(type_random)
+                this.pddj()
+                break;
+
+
+
+            }
+
+        }
+
     }
 
     onTouchMove(event:EventTouch){
@@ -412,6 +486,9 @@ export class game extends Component {
             case "btn_3":
 
                 if (this.isJinZhi||this.isBtn3){
+                    if (this.arrLableNumber[2]==0){
+                        this.showTips("每关只能使用一次刷新哦！")
+                    }
                     return
                 }
                 this.arrLableNumber[2]--
@@ -423,6 +500,9 @@ export class game extends Component {
             //出去3个按钮
             case "btn_1":
                 if (this.isJinZhi||this.isBtn1){
+                    if (this.arrLableNumber[0]==0){
+                        this.showTips("每关只能使用一次移出哦！")
+                    }
                     return
                 }
 
@@ -432,6 +512,9 @@ export class game extends Component {
             //撤回按钮
             case "btn_2":
                 if (this.isJinZhi||this.isBtn2){
+                    if (this.arrLableNumber[1]==0){
+                        this.showTips("每关只能使用一次撤回哦！")
+                    }
                     return
                 }
 
@@ -441,6 +524,7 @@ export class game extends Component {
                 //复活按钮
             case "btn_fh":
                 if (this.arrLableNumber[3]==0){
+                        this.showTips("每关只能使用一次复活哦！")
                     return;
                 }
                 this.layerOver.active = false
@@ -449,7 +533,6 @@ export class game extends Component {
                 //修改道具数量
                 this.arrLableNumber[3]--
                 this.shuaXinDJ()
-
                 this.btn1("fh")
                 break;
 
@@ -459,6 +542,23 @@ export class game extends Component {
                 this.isJinZhi = false
                 this.init()
                 break;
+
+            //输出坐标
+            case "btn_shuChu":
+                this.getBlockZuoBiao()
+                break;
+
+                //编辑器
+            case "btn_yin":
+                this.isBianJi = !this.isBianJi
+
+                let children = this.parentEdit.children
+                for (let i = children.length-1; i >= 0; i--) {
+                    if (children[i].name == "blockEdit") {
+                        children[i].active = !children[i].active
+                    }
+                }
+
 
 
         }
@@ -533,6 +633,10 @@ export class game extends Component {
                     }
                 })
                 .start()
+        }{
+            if (children.length<1){
+                this.showTips("没有元素可以撤回哦！")
+            }
         }
     }
 
@@ -638,6 +742,10 @@ export class game extends Component {
                     })
                     .start()
             }
+        }else {
+            if (children.length<1){
+                this.showTips("没有元素可以移出哦！")
+            }
         }
 
 
@@ -697,6 +805,7 @@ export class game extends Component {
         let parentBlocks = this.parentBlocks.children
         if (parentBlocks.length==0){
             this.isJinZhi = true
+            this.audioSource.playOneShot(this.arrAudio[3],1)
 
             //延时一秒后执行
             this.scheduleOnce(()=>{
@@ -713,6 +822,8 @@ export class game extends Component {
         let parentBlocksDB = this.parentBlocksDB.children
         if (parentBlocksDB.length>=7){
             this.isJinZhi = true
+            this.audioSource.playOneShot(this.arrAudio[2],1)
+
             //延时一秒后执行
             this.scheduleOnce(()=>{
                 console.log("游戏失败")
@@ -723,6 +834,44 @@ export class game extends Component {
         }
     }
 
+
+    //显示提示信息
+    showTips(str:string){
+        this.nodeTap.getChildByName("bg").getChildByName("Label").getComponent(Label).string = str
+        //写一个动画
+        tween(this.nodeTap)
+            .to(0.1,{scale:new Vec3(1,1,1)})
+            .delay(1)
+            .to(0.1,{scale:new Vec3(0,0,0)})
+            .start()
+        this.nodeTap.scale = new Vec3(0,0,0)
+
+
+    }
+
+    //创建编辑器元素
+    createBlockEdit(){
+        //列
+        let hang = 14
+        //行
+        let lie = 15
+        //创建10个，需要两个循环控制行和列
+        for (let i = 0; i < hang; i++) {
+            for (let j = 0; j < lie; j++) {
+
+                //实例化出block
+                let node_block =  instantiate(this.preBlockEdit)
+                //设置block的位置
+                node_block.setPosition(i*40-(hang-1)*40/2,j*45-200,0)
+                // this.node 就是拖拽进来的预制体
+                node_block.parent = this.parentEdit
+                //默认隐藏
+                node_block.active = false
+            }
+        }
+
+
+    }
 
     update(deltaTime: number) {
 
