@@ -1,4 +1,4 @@
-import { _decorator,Component, Node ,Prefab,instantiate,tween,Input,Sprite,Vec3,Color,Vec2,input,EventTouch,UITransform} from 'cc';
+import { _decorator,Component, Node ,Label,Prefab,instantiate,tween,Input,Sprite,Vec3,Color,Vec2,input,EventTouch,UITransform} from 'cc';
 import {block} from "db://assets/typeScript/block";
 import {gameData} from "db://assets/typeScript/gameData";
 
@@ -18,10 +18,19 @@ export class game extends Component {
     @property({type:Prefab})
     preBlock = null
 
-    //存放每一个block
+    //上部block
     @property({type:Node})
     parentBlocks = null
 
+    //定义第几关
+    @property({type:Label})
+    labelLevel = null
+
+    //定义失败后的按钮
+    @property({type:Node})
+    layerOver = null
+
+    //底部block
     @property({type:Node})
     parentBlocksDB = null
 
@@ -41,6 +50,8 @@ export class game extends Component {
     isBtn1: boolean;
     //是否禁用btn_2
     isBtn2: Boolean;
+    //是否禁用btn_3
+    isBtn3: Boolean;
     //最新加入的元素
     newBlock: any;
 
@@ -53,20 +64,9 @@ export class game extends Component {
         // this.xStartDB = -250
         //关卡数据
         this.gameData = this.node.getComponent(gameData)
-        //删除所有子节点
-        this.parentBlocks.removeAllChildren()
-        //创建block
-        this.crateBlocks()
-        // this.pddj()
-        this.btn3()
-        //是否消除
-        this.isXiaoChu = false
-        //是否禁用btn_1
-        this.isBtn1 = false
-        //是否禁用btn_2
-        this.isBtn2 = false
-        //最新加入的元素
-        this.newBlock = null
+
+
+        this.init()
 
 
 
@@ -74,6 +74,32 @@ export class game extends Component {
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
         input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+    }
+
+
+    //初始化
+    init(){
+        //删除所有子节点
+        this.parentBlocks.removeAllChildren()
+        this.parentBlocksDB.removeAllChildren()
+
+        this.isXiaoChu = false
+        //是否禁用btn_1
+        this.isBtn1 = false
+        //是否禁用btn_2
+        this.isBtn2 = false
+        //是否禁用btn_3
+        this.isBtn3 = false
+        //最新加入的元素
+        this.newBlock = null
+        //创建block
+        this.crateBlocks()
+        // this.pddj()
+        this.btn3()
+        //将失败后的背景图变为false
+        this.layerOver.active = false
+        //更新关卡
+        this.labelLevel.string = "第 "+(this.numLevel+1)+" 关"
     }
 
     //创建一个block
@@ -125,12 +151,16 @@ export class game extends Component {
 
         //添加动作
         tween(node_block)
-            .to(0.12,{position:new Vec3(x,y,0)})
+            .to(0.08,{position:new Vec3(x,y,0)})
             .call(()=>{
                 if (blockBottomPos.returnNum){
                     this.pdxc(blockBottomPos.num)
+                    //判断游戏是否成功
+                    this.pdGameTrue()
                 }else {
                     this.isXiaoChu = false
+                    //判断游戏是否失败
+                    this.pdGameFalse()
                 }
             })
             .start()
@@ -172,7 +202,7 @@ export class game extends Component {
                 for (let j = k+1; j <= children.length-1; j++) {
                     //将后面的元素x坐标加80
                     tween(children[j])
-                        .to(0.1,{position:new Vec3(children[j].getPosition().x+80,0,0)})
+                        .to(0.05,{position:new Vec3(children[j].getPosition().x+80,0,0)})
                         .start()
                     // children[j].setPosition(children[j].getPosition().x+80,0,0)
                 }
@@ -198,8 +228,8 @@ export class game extends Component {
             //删除元素
             //创建一个删除的动作
             tween(children[i])
-                .delay(0.08)
-                .to(0.1,{scale:new Vec3(0,0,0)})
+                .delay(0.05)
+                .to(0.05,{scale:new Vec3(0,0,0)})
                 .removeSelf()
                 .call(()=>{
                     //循环遍历所有元素，从number下角标向后每个block的x坐标减240
@@ -207,8 +237,8 @@ export class game extends Component {
                         //做一个移动的动作
                         //x坐标减240
                         tween(children[j])
-                            .delay(0.08)
-                            .to(0.1,{position:new Vec3(children[j].getPosition().x-240,0,0)})
+                            .delay(0.05)
+                            .to(0.05,{position:new Vec3(children[j].getPosition().x-240,0,0)})
                             .call(()=>{
                                 this.isXiaoChu = false
                                 this.newBlock = null
@@ -317,9 +347,9 @@ export class game extends Component {
                         this.isXiaoChu = true
                         ts_block.isXiaoChu = true
                         this.createBlockBottom(ts_block.blockType,item.getPosition())
-                            item.removeFromParent();
-                            this.pddj()
-                            break
+                        item.removeFromParent();
+                        this.pddj()
+                        break
                     }
                 }
             }
@@ -347,6 +377,20 @@ export class game extends Component {
                 this.btn2()
                 break;
 
+                //复活按钮
+            case "btn_fh":
+                this.layerOver.active = false
+                this.isBtn1 = false
+                this.btn1()
+                break;
+
+                //重新开始
+            case "btn_cw":
+                this.numLevel = 0
+                this.init()
+                break;
+
+
         }
 
 
@@ -354,7 +398,6 @@ export class game extends Component {
 
     //撤回的方法
     btn2(){
-        debugger
         console.log("撤回"   )
         if (this.isXiaoChu) {
             return
@@ -525,6 +568,10 @@ export class game extends Component {
 
     //洗牌功能
     btn3(){
+        if (this.isBtn3){
+            return
+        }
+        this.isBtn3 = true
         let children = this.parentBlocks.children
         for (let i = 0; i < children.length; i++) {
             let item = children[i];
@@ -568,6 +615,35 @@ export class game extends Component {
         for (let i = 0; i < children.length; i++) {
             let item = children[i].getPosition();
             str = str+"{x:"+item.x+",y:"+item.y+"},\n"
+        }
+    }
+
+    //判断游戏成功
+    pdGameTrue(){
+        let parentBlocks = this.parentBlocks.children
+        if (parentBlocks.length==0){
+
+            //延时一秒后执行
+            this.scheduleOnce(()=>{
+                this.numLevel++
+                //延时一秒后执行
+                this.init()
+            },1)
+            console.log("游戏成功")
+        }
+    }
+
+    //判断游戏失败
+    pdGameFalse(){
+        let parentBlocksDB = this.parentBlocksDB.children
+        if (parentBlocksDB.length>=7){
+            //延时一秒后执行
+            this.scheduleOnce(()=>{
+                console.log("游戏失败")
+                //将失败后的背景图变为false
+                this.layerOver.active = true
+            },1)
+
         }
     }
 
