@@ -39,6 +39,10 @@ export class game extends Component {
     isXiaoChu: boolean;
     //是否禁用btn_1
     isBtn1: boolean;
+    //是否禁用btn_2
+    isBtn2: Boolean;
+    //最新加入的元素
+    newBlock: any;
 
 
     start() {
@@ -59,6 +63,10 @@ export class game extends Component {
         this.isXiaoChu = false
         //是否禁用btn_1
         this.isBtn1 = false
+        //是否禁用btn_2
+        this.isBtn2 = false
+        //最新加入的元素
+        this.newBlock = null
 
 
 
@@ -101,11 +109,11 @@ export class game extends Component {
         let node_block =  instantiate(this.preBlock)
         var blockBottomPos = this.getBlockBottomPos(type);
 
-
-
         //得到元素的坐标
         let x = this.xStartDB+80 * blockBottomPos.num
         let y = 0
+        blockBottomPos["zb"]=startPosition
+        this.newBlock = blockBottomPos
 
         //将parentBlocks的坐标转为世界坐标
         let v3_startPosition = this.parentBlocks.getComponent(UITransform).convertToWorldSpaceAR(startPosition)
@@ -169,13 +177,13 @@ export class game extends Component {
                     // children[j].setPosition(children[j].getPosition().x+80,0,0)
                 }
                 //改变元素在parentBlocksDB的位置
-                return {num:k+1,is:true,returnNum:returnNum}
+                return {num:k+1,is:true,returnNum:returnNum,type:type}
             }
         }
-        return {num:children.length,is:false}
+        return {num:children.length,is:false,type:type}
         }
         else {
-           return {num:children.length,is:false}
+           return {num:children.length,is:false,type:type}
         }
 
     }
@@ -203,6 +211,7 @@ export class game extends Component {
                             .to(0.1,{position:new Vec3(children[j].getPosition().x-240,0,0)})
                             .call(()=>{
                                 this.isXiaoChu = false
+                                this.newBlock = null
                             })
                             .start()
                         // children[j].setPosition(children[j].getPosition().x-240,0,0)
@@ -332,10 +341,88 @@ export class game extends Component {
             case "btn_1":
                 this.btn1()
                 break;
+
+            //撤回按钮
+            case "btn_2":
+                this.btn2()
+                break;
+
         }
 
 
     }
+
+    //撤回的方法
+    btn2(){
+        debugger
+        console.log("撤回"   )
+        if (this.isXiaoChu) {
+            return
+        }
+        this.isXiaoChu = true
+        //获取所有的元素
+        let children = this.parentBlocksDB.children
+        //判断长度是否大于3
+
+        //判断长度是否大于1
+        if (children.length>=1&&!this.isBtn2&&this.newBlock!=null) {
+            let isThree = children.length > this.newBlock.num+1
+            this.isBtn2 = true
+            //循环遍历所有元素，
+            //添加元素到底部
+            let preBlock = instantiate(this.preBlock)
+
+            preBlock.parent = this.parentBlocks
+            //初始化元素
+            //加一个转场动画
+            //将parentBlocksDB的坐标转为世界坐标
+            let v3_startPosition = this.parentBlocksDB.getComponent(UITransform).convertToWorldSpaceAR(children[this.newBlock.num].getPosition())
+            //将世界坐标转为parentBlocks的坐标
+            let v3_startPositionDB = this.parentBlocks.getComponent(UITransform).convertToNodeSpaceAR(v3_startPosition)
+
+            //设置block的位置
+            preBlock.setPosition(v3_startPositionDB)
+
+            tween(preBlock)
+                .to(0.1,{position:new Vec3(this.newBlock.zb)})
+                .call(()=>{
+                    this.pddj()
+                })
+                .start()
+
+
+            let block_1 = preBlock.getComponent(block)
+            block_1.init(this.newBlock.type)
+            block_1.setTouch(true)
+
+
+            tween(children[this.newBlock.num])
+                .delay(0.05)
+                .to(0.05,{scale:new Vec3(0,0,0)})
+                .removeSelf()
+                .call(()=>{
+                    if (isThree){
+                        //循环遍历所有元素，从number下角标向后每个block的x坐标减240
+                        for (let j = this.newBlock.num; j < children.length; j++) {
+                            //做一个移动的动作
+                            //x坐标减240
+                            //加一个转场动画
+                            tween(children[j])
+                                .delay(0.05)
+                                .to(0.05,{position:new Vec3(children[j].getPosition().x-80,0,0)})
+                                .call(()=>{
+                                    this.isXiaoChu = false
+                                })
+                                .start()
+                        }
+                    }else {
+                        this.isXiaoChu = false
+                    }
+                })
+                .start()
+        }
+    }
+
 
     //出去3个按钮
     btn1(){
@@ -359,18 +446,46 @@ export class game extends Component {
                 let preBlock = instantiate(this.preBlock)
 
                 preBlock.parent = this.parentBlocks
+
+                //加一个转场动画
+                let v3_startPosition = this.parentBlocksDB.getComponent(UITransform).convertToWorldSpaceAR(children[i].getPosition())
+                //将世界坐标转为parentBlocks的坐标
+                let v3_startPositionDB = this.parentBlocks.getComponent(UITransform).convertToNodeSpaceAR(v3_startPosition)
+
+                //设置block的位置
+                preBlock.setPosition(v3_startPositionDB)
+
                 //初始化元素
                 switch (length) {
                     case 1:
-                        preBlock.setPosition(this.gameData.arrPosRemove[1].x,this.gameData.arrPosRemove[1].y,0)
+                        //加一个转场动画
+                        tween(preBlock)
+                            .to(0.1,{position:new Vec3(this.gameData.arrPosRemove[1].x,this.gameData.arrPosRemove[1].y,0)})
+                            .call(()=>{
+                                this.pddj()
+                            })
+                            .start()
                         break;
                     case 2:
+
                         let zuobiao = i==0?this.gameData.arrPosRemove[0]:this.gameData.arrPosRemove[2]
-                        preBlock.setPosition(zuobiao.x,zuobiao.y,0)
+                        //加一个转场动画
+                        tween(preBlock)
+                            .to(0.1,{position:new Vec3(zuobiao.x,zuobiao.y,0)})
+                            .call(()=>{
+                                this.pddj()
+                            })
+                            .start()
                         break;
                     case 3:
-                        preBlock.setPosition(this.gameData.arrPosRemove[i].x,this.gameData.arrPosRemove[i].y,0)
-
+                        //加一个转场动画
+                        tween(preBlock)
+                            .to(0.1,{position:new Vec3(this.gameData.arrPosRemove[i].x,this.gameData.arrPosRemove[i].y,0)})
+                            .call(()=>{
+                                this.pddj()
+                            })
+                            .start()
+                        break;
                 }
                 let block_1 = preBlock.getComponent(block)
                 block_1.init(children[i].getComponent(block).blockType)
