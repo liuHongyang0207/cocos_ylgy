@@ -30,6 +30,10 @@ export class game extends Component {
     @property({type:Label})
     labelLevel = null
 
+    //显示元素块数
+    @property({type:Label})
+    labelBlocksNum = null
+
     //定义失败后的按钮
     @property({type:Node})
     layerOver = null
@@ -89,6 +93,8 @@ export class game extends Component {
     isBianJi: boolean;
     //防止拖动添加多个
     editMove: number;
+    //是否随机生成
+    isSuiJi: boolean;
 
 
 
@@ -102,18 +108,21 @@ export class game extends Component {
         //关卡数据
         this.gameData = this.node.getComponent(gameData)
         //每增加一关增加的块数
-        this.numAdd =33
+        this.numAdd =66
         //道具的数量
         this.arrLableNumber= this.node.getComponent(gameData).arrLableNumber
 
         //是否是编辑模式
-        this.isBianJi = true
+        this.isBianJi = false
 
         //默认添加模式
         this.isAddDelete = 0
 
         //初始化音频
         this.audioSource = this.node.getComponent(AudioSource)
+
+        //是否开启随机生成
+        this.isSuiJi = false
 
 
         this.init()
@@ -156,9 +165,9 @@ export class game extends Component {
 
             }
         }else {
-            this.parentBlocks.removeAllchildren()
+            this.parentBlocks.removeAllChildren()
             //创建block
-            this.crateBlocks()
+            this.crateBlocks("chuangjian")
         }
 
 
@@ -190,6 +199,20 @@ export class game extends Component {
             }else {
                 this.labelLevel.string = "删除元素模式"
             }
+
+            //获取元素数
+            let children = this.parentBlocks.children
+            //判断是否3的倍数
+            if (children.length%3==0) {
+                this.labelBlocksNum.string = "元素总数："+children.length+" (是3的倍数)"
+                //添加颜色
+                this.labelBlocksNum.color = new Color(123,129,115,255)
+            }else {
+                this.labelBlocksNum.string = "元素总数："+children.length+" (不是3的倍数)"
+                //添加颜色
+                this.labelBlocksNum.color = new Color(226,87,110,255)
+
+            }
         }else {
             this.labelLevel.string = "第 "+(this.numLevel+1)+" 关"
         }
@@ -197,7 +220,8 @@ export class game extends Component {
 
 
     //创建一个block
-    crateBlocks(){
+    crateBlocks(str?:string){
+        debugger
         //随机一个元素类型
         let num_type_random = 0
         //关卡难度
@@ -205,26 +229,39 @@ export class game extends Component {
         //循环创建十个block
         let arrPos = 0
         let arrPosArray = null
-        if (this.numLevel==0) {
+        if (this.numLevel<=0&&str!="suiji"){
             arrPos = this.gameData.arrPosLevel[this.numLevel].length
             arrPosArray = this.gameData.arrPosLevel[this.numLevel]
         }else {
             arrPos = this.numAdd*(this.numLevel+1)
         }
+        if (str=="suiji"){
+
+            //获取编辑器的所有元素
+            var childrenEdit = this.parentEdit.children
+            // this.parentBlocks.removeAllchildren()
+        }
 
         for (let i = 0; i < arrPos; i++) {
             //实例化出block
             let node_block =  instantiate(this.preBlock)
-            if (arrPosArray!=null){
+            if (arrPosArray!=null&&str!="suiji"){
                 let x = arrPosArray[i].x
                 let y = arrPosArray[i].y
                 //设置block的位置
                 node_block.setPosition(x,y,0)
             }else {
-                let x = -250 +Math.random() *500
-                let y = -210 +Math.random() *620
-                //设置block的位置
-                node_block.setPosition(x,y,0)
+                if (i==0){
+                    this.createBlockEdit()
+                    childrenEdit = this.parentEdit.children
+
+                }
+                    //获取随机的坐标
+                    let num = Math.floor(Math.random()*childrenEdit.length-1)
+                    let x = childrenEdit[num].getPosition().x
+                    let y = childrenEdit[num].getPosition().y
+                    //设置block的位置
+                    node_block.setPosition(x,y,0)
             }
 
 
@@ -237,6 +274,11 @@ export class game extends Component {
                 num_type_random = Math.floor(Math.random()*arrTypeLevel)
             }
             block_1.init(num_type_random)
+        }
+
+        if (str=="suiji"){
+            //判断是否可以消除
+            this.pddj()
         }
     }
 
@@ -434,6 +476,7 @@ export class game extends Component {
 
 
     bianJi(rect_parentEdit: any, start1: string){
+
         let children = this.parentEdit.children
         if (this.isAddDelete==0){
             for (let i = children.length-1; i >= 0; i--) {
@@ -459,6 +502,7 @@ export class game extends Component {
                     let type_random = Math.floor(Math.random()*30)
                     block_1.init(type_random)
                     this.pddj()
+                    this.shuXinTitle()
                     return
                 }
 
@@ -478,11 +522,14 @@ export class game extends Component {
                     //创建
                     item.removeFromParent();
                     this.pddj()
+                    this.shuXinTitle()
                     return
                 }
 
             }
         }
+
+
 
     }
 
@@ -626,6 +673,7 @@ export class game extends Component {
             //清空
             case "btn_clear":
                 this.parentBlocks.removeAllChildren()
+                this.shuXinTitle()
                 break;
 
             //添加
@@ -640,11 +688,21 @@ export class game extends Component {
                 this.shuXinTitle()
                 break;
 
+                //随机生成
+            case "btn_suiJi":
+                if (!this.isBianJi){
+                    this.showTips("只能在编辑模式下使用哦！")
+                    return;
+                }
+                this.crateBlocks("suiji")
+                break
+
 
         }
 
 
     }
+
 
     //撤回的方法
     btn2(){
@@ -874,10 +932,14 @@ export class game extends Component {
     getBlockZuoBiao(){
         let str = ""
         let children = this.parentBlocks.children
-        for (let i = 0; i < children.length; i++) {
-            let item = children[i].getPosition();
-            str = str+"{x:"+item.x+",y:"+item.y+"},\n"
+        if (children.length>0&&children.length%3==0){
+            for (let i = 0; i < children.length; i++) {
+                let item = children[i].getPosition();
+                str = str+"{x:"+item.x+",y:"+item.y+"},\n"
+            }
             console.log(str)
+        }else {
+            this.showTips("元素数量不是3的倍数/个数为0")
         }
     }
 
