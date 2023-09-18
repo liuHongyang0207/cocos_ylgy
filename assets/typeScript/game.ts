@@ -1,4 +1,4 @@
-import { _decorator,Component, Node ,Label,Prefab,AudioClip,instantiate,tween,Input,AudioSource,Sprite,Vec3,Color,Vec2,input,EventTouch,UITransform} from 'cc';
+import { _decorator,Component, Node,Label,Prefab,AudioClip,instantiate,tween,Input,AudioSource,Sprite,Vec3,Color,Vec2,input,EventTouch,UITransform} from 'cc';
 import {block} from "db://assets/typeScript/block";
 import {gameData} from "db://assets/typeScript/gameData";
 
@@ -124,7 +124,9 @@ export class game extends Component {
         //是否开启随机生成
         this.isSuiJi = false
 
+        this.bg()
 
+        //初始化
         this.init()
 
         //道具的数组
@@ -136,6 +138,19 @@ export class game extends Component {
         input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
         input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
         input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+    }
+
+
+    //填充背景
+    bg(){
+        // debugger
+        // //填充背景bg，获取当前设备屏幕的宽高，不是项目设置的宽高
+        //
+        // let size = this.node.getComponent(UITransform).designResolution
+        // //获取背景的宽高
+        // // let size_bg = this.node.getChildByName("bg").getComponent(UITransform).contentSize
+        // //将bg的背景填充满
+        // this.node.getChildByName("bg").getComponent(UITransform).setContentSize(size.width,size.height)
     }
 
 
@@ -221,7 +236,6 @@ export class game extends Component {
 
     //创建一个block
     crateBlocks(str?:string){
-        debugger
         //随机一个元素类型
         let num_type_random = 0
         //关卡难度
@@ -229,7 +243,7 @@ export class game extends Component {
         //循环创建十个block
         let arrPos = 0
         let arrPosArray = null
-        if (this.numLevel<=0&&str!="suiji"){
+        if (this.numLevel<=1&&str!="suiji"){
             arrPos = this.gameData.arrPosLevel[this.numLevel].length
             arrPosArray = this.gameData.arrPosLevel[this.numLevel]
         }else {
